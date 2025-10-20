@@ -5,10 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Set API key the old way
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-# Debug: Print if API key is loaded
 if not openai.api_key:
     print("WARNING: OPENAI_API_KEY not found!")
 else:
@@ -36,8 +34,11 @@ Supported visualization types:
 - line: For trends over time
 - table: For raw data display (uses 'columns' list)
 
-Return ONLY valid JSON in this exact format:
+IMPORTANT: Determine if the user is creating a NEW visualization or TWEAKING an existing one.
+
+For NEW visualizations, return:
 {
+  "is_tweak": false,
   "query_type": "pie|scatter|bar|line|table",
   "config": {
     "column": "column_name",
@@ -45,8 +46,19 @@ Return ONLY valid JSON in this exact format:
     "y_column": "column_name",
     "columns": ["col1", "col2"],
     "title": "Chart Title",
-    "color": "#hexcode",
     "limit": 20
+  }
+}
+
+For TWEAKING visualizations (phrases like "change color", "make bold", "change to blue"), return:
+{
+  "is_tweak": true,
+  "tweak_type": "color|style|format",
+  "modifications": {
+    "color": "#hexcode or color name",
+    "bold": true/false,
+    "fontSize": "size",
+    "other_style": "value"
   }
 }
 

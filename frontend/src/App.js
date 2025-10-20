@@ -28,8 +28,39 @@ function App() {
         prompt: prompt
       });
 
-      setVisualizations([...visualizations, { id: Date.now(), ...response.data }]);
-      setPrompt('');
+      // Check if this is a tweak request
+      if (response.data.is_tweak) {
+        if (visualizations.length === 0) {
+          setError('No visualization to tweak. Create one first!');
+          setLoading(false);
+          return;
+        }
+
+        // Apply modifications to the last visualization
+        const modifications = response.data.modifications;
+        const updatedVizs = [...visualizations];
+        const lastIndex = updatedVizs.length - 1;
+        
+        // Merge modifications into the last visualization
+        updatedVizs[lastIndex] = {
+          ...updatedVizs[lastIndex],
+          styles: {
+            ...updatedVizs[lastIndex].styles,
+            ...modifications
+          }
+        };
+
+        setVisualizations(updatedVizs);
+        setPrompt('');
+      } else {
+        // Add new visualization
+        setVisualizations([...visualizations, { 
+          id: Date.now(), 
+          ...response.data,
+          styles: {} // Initialize empty styles
+        }]);
+        setPrompt('');
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to generate visualization');
       console.error(err);
@@ -39,6 +70,9 @@ function App() {
   };
 
   const renderVisualization = (viz) => {
+    const chartColor = viz.styles?.color || '#8884d8';
+    const fillColors = COLORS;
+
     switch (viz.type) {
       case 'pie':
         return (
@@ -54,7 +88,10 @@ function App() {
                 label
               >
                 {viz.data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={viz.styles?.color || fillColors[index % fillColors.length]} 
+                  />
                 ))}
               </Pie>
               <Tooltip />
@@ -72,7 +109,7 @@ function App() {
               <YAxis dataKey={viz.y_label} name={viz.y_label} />
               <Tooltip cursor={{ strokeDasharray: '3 3' }} />
               <Legend />
-              <Scatter name={viz.title} data={viz.data} fill="#8884d8" />
+              <Scatter name={viz.title} data={viz.data} fill={chartColor} />
             </ScatterChart>
           </ResponsiveContainer>
         );
@@ -86,7 +123,7 @@ function App() {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey={viz.y_label} fill="#8884d8" />
+              <Bar dataKey={viz.y_label} fill={chartColor} />
             </BarChart>
           </ResponsiveContainer>
         );
@@ -100,19 +137,24 @@ function App() {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Line type="monotone" dataKey={viz.y_label} stroke="#8884d8" />
+              <Line type="monotone" dataKey={viz.y_label} stroke={chartColor} />
             </LineChart>
           </ResponsiveContainer>
         );
 
       case 'table':
+        const headerStyle = {
+          fontWeight: viz.styles?.bold ? 'bold' : '600',
+          fontSize: viz.styles?.fontSize || 'inherit'
+        };
+
         return (
           <div style={{ overflowX: 'auto', maxHeight: '400px' }}>
             <table className="data-table">
               <thead>
                 <tr>
                   {viz.columns.map((col) => (
-                    <th key={col}>{col}</th>
+                    <th key={col} style={headerStyle}>{col}</th>
                   ))}
                 </tr>
               </thead>
@@ -181,6 +223,10 @@ function App() {
               <li>"Create a scatter plot of founded year and valuation"</li>
               <li>"Show me which investors appear most frequently"</li>
             </ul>
+            <p style={{marginTop: '1rem', fontStyle: 'italic', color: '#888'}}>
+              After creating a chart, you can tweak it with prompts like:<br/>
+              "Change the color to light blue" or "Make the header row bold"
+            </p>
           </div>
         )}
       </div>

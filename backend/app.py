@@ -29,6 +29,14 @@ def visualize():
     if not config:
         return jsonify({'error': 'Could not parse query'}), 400
     
+    # Check if this is a tweak request
+    if config.get('is_tweak'):
+        # Return tweak modifications
+        return jsonify({
+            'is_tweak': True,
+            'modifications': config.get('modifications', {})
+        })
+    
     query_type = config.get('query_type')
     query_config = config.get('config', {})
     
@@ -67,5 +75,3 @@ def get_data():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
-
-    
