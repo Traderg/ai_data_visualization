@@ -1,6 +1,7 @@
 import openai
 import os
 import json
+import sys
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -8,9 +9,9 @@ load_dotenv()
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
 if not openai.api_key:
-    print("WARNING: OPENAI_API_KEY not found!")
+    print("WARNING: OPENAI_API_KEY not found!", flush=True)
 else:
-    print(f"OpenAI API Key loaded: {openai.api_key[:20]}...")
+    print(f"OpenAI API Key loaded: {openai.api_key[:20]}...", flush=True)
 
 SYSTEM_PROMPT = """You are a data visualization assistant. Given a user's natural language request and dataset information, generate a JSON configuration for creating visualizations.
 
@@ -55,12 +56,15 @@ For TWEAKING visualizations (phrases like "change color", "make bold", "change t
   "is_tweak": true,
   "tweak_type": "color|style|format",
   "modifications": {
-    "color": "#hexcode or color name",
+    "color": "#hexcode or color name like lightblue, red, green",
     "bold": true/false,
-    "fontSize": "size",
-    "other_style": "value"
+    "fontSize": "size"
   }
 }
+
+CRITICAL: For color tweaks, return the actual color name or hex code in the modifications.color field.
+Example: "change color to light blue" should return {"color": "lightblue"}
+Example: "change color to red" should return {"color": "#ff0000"}
 
 For investor frequency analysis, use table type with columns focusing on Top Investors.
 For correlation analysis (ARR vs Valuation), use scatter plot with ARR Numeric and Valuation Numeric.
@@ -69,10 +73,12 @@ For correlation analysis (ARR vs Valuation), use scatter plot with ARR Numeric a
 def parse_user_query(user_prompt):
     """Use OpenAI to parse user query into visualization config"""
     
-    print(f"=== Parsing query: {user_prompt}")
+    print(f"\n{'='*60}", flush=True)
+    print(f"PARSING QUERY: {user_prompt}", flush=True)
+    print(f"{'='*60}\n", flush=True)
     
     try:
-        print(f"=== Calling OpenAI API...")
+        print(f"Calling OpenAI API...", flush=True)
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
@@ -84,7 +90,10 @@ def parse_user_query(user_prompt):
         )
         
         result = response.choices[0].message.content.strip()
-        print(f"=== GPT Response: {result}")
+        print(f"\n{'='*60}", flush=True)
+        print(f"GPT RAW RESPONSE:", flush=True)
+        print(result, flush=True)
+        print(f"{'='*60}\n", flush=True)
         
         # Clean up response if it has markdown code blocks
         if result.startswith('```'):
@@ -94,15 +103,20 @@ def parse_user_query(user_prompt):
             result = result.strip()
         
         config = json.loads(result)
-        print(f"=== Parsed config successfully: {config}")
+        
+        print(f"\n{'='*60}", flush=True)
+        print(f"PARSED CONFIG:", flush=True)
+        print(json.dumps(config, indent=2), flush=True)
+        print(f"{'='*60}\n", flush=True)
+        
         return config
         
     except json.JSONDecodeError as e:
-        print(f"=== JSON Parse Error: {e}")
-        print(f"=== Response was: {result}")
+        print(f"JSON PARSE ERROR: {e}", flush=True)
+        print(f"Response was: {result}", flush=True)
         return None
     except Exception as e:
-        print(f"=== OpenAI API Error: {e}")
+        print(f"OPENAI API ERROR: {e}", flush=True)
         import traceback
         traceback.print_exc()
         return None
